@@ -1,20 +1,77 @@
 import re
+import requests
 
+# Регулярное выражение для телефона
 REGEX = re.compile(
-    r"^((\+\d{1,4})|(\d{1,4}))(([ -]\d{3})|(\(\d{3}\))|\d{3})(([ -]?\d{3}[ -]\d{2}[ -]\d{2})|([ -]?\d{7})|\d{7})$")
+    r"(\+?\d{1,4}[\s-]?)?(\(?\d{3}\)?[\s-]?)(\d{3})[\s-]?(\d{2})[\s-]?(\d{2})"
+)
+
+def validatePhoneNumberFromUrl(url):
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36'
+    }
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()  # Проверяет статус HTTP
+    except requests.exceptions.RequestException as e:
+        print(f"Ошибка при запросе к URL: {e}")
+        return
+
+    text = response.text
+    phone_numbers = re.findall(REGEX, text)
+    for number in phone_numbers:
+        print(f"Найден номер телефона: {number[0]} - {'Корректный' if validatePhoneNumber(number[0]) else 'Некорректный'}")
 
 
 def validatePhoneNumber(Number):
-    if re.match(REGEX, Number):
-        return True
+    return bool(re.match(REGEX, Number.strip()))  # Убираем пробелы
+
+def validatePhoneNumberFromInput():
+    phoneNumber = input("Введите номер телефона: ")
+    if validatePhoneNumber(phoneNumber):
+        print("Телефонный номер является синтаксически корректным номером телефона")
     else:
-        return False
+        print("Телефонный номер является синтаксически некорректным номером телефона")
 
+def validatePhoneNumberFromUrl(url):
+    try:
+        response = requests.get(url)
+        response.raise_for_status()  # Проверяет, произошла ли ошибка HTTP
+    except requests.exceptions.RequestException as e:
+        print(f"Ошибка при запросе к URL: {e}")
+        return
 
-print("Введите номер телефона: ")
-phoneNumber = input()
+    text = response.text
+    phone_numbers = re.findall(REGEX, text)
+    for number in phone_numbers:
+        formatted_number = ''.join(number)  # Объединяем все части, чтобы получить полный номер
+        print(f"Найден номер телефона: {formatted_number} - {'Корректный' if validatePhoneNumber(formatted_number) else 'Некорректный'}")
 
-if validatePhoneNumber(phoneNumber):
-    print("Телефонный номер является синтаксически корректным номером телефона")
-else:
-    print("Телефонный номер является синтаксически некорректным номером телефона")
+def validatePhoneNumberFromFile(file_path):
+    try:
+        with open(file_path, 'r', encoding='utf-8') as file:  # Укажите кодировку, если это необходимо
+            text = file.read()
+            phone_numbers = re.findall(REGEX, text)
+            for number in phone_numbers:
+                formatted_number = ''.join(number) # Объединяем части номера
+                formatted_number = formatted_number.strip()  # Убираем пробелы
+                if formatted_number:  # Проверяем, что номер не пустой
+                    print(f"Найден номер телефона: {formatted_number} - {'Корректный' if validatePhoneNumber(formatted_number) else 'Некорректный'}")
+    except FileNotFoundError:
+        print(f"Файл по пути {file_path} не найден.")
+    except Exception as e:
+        print(f"Произошла ошибка при чтении файла: {e}")
+
+if __name__ == "__main__":  # Исправлено на '__name__'
+    print("Выберите способ ввода: 1 - Ввод номера, 2 - URL, 3 - Файл")
+    choice = input()
+    if choice == '1':
+        validatePhoneNumberFromInput()
+    elif choice == '2':
+        url = input("Введите URL: ")
+        validatePhoneNumberFromUrl(url)
+    elif choice == '3':
+        file_path = input("Введите путь к файлу: ")
+        validatePhoneNumberFromFile(file_path)
+    else:
+        print("Неверный выбор!")
